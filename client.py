@@ -22,21 +22,11 @@ def client_init():
 
     return req_type, addr, port
 
-def packet_builder(data_array):
+def request_packet_builder(data_array):
     """Takes an array of all the packet numbers and converts it to a bytearray packet"""
-
     composed_packet = bytearray()
-
-    #Goes through each inputted parameter and adjusts the numbers into bytes correctly
     for parameter in data_array:
-        if parameter < 256:
-            composed_packet += parameter.to_bytes(1, byteorder="big")
-        elif parameter < 655356:
-            composed_packet += parameter.to_bytes(2, byteorder="big")
-        elif parameter < 16777216:
-            composed_packet += parameter.to_bytes(3, byteorder="big")
-        elif parameter < 4294967296:
-            composed_packet += parameter.to_bytes(4, byteorder="big")
+        composed_packet += parameter.to_bytes(2, byteorder="big")
 
     return composed_packet
 
@@ -50,8 +40,10 @@ def make_request(req_type, addr, port):
         req = 0x0002
 
     request_array = [0x497E, 0x0001, req]
-    dt_request = packet_builder(request_array)
+    dt_request = request_packet_builder(request_array)
 
+    print(dt_request)
+    print("length", len(dt_request))
     sock.sendto(dt_request, (addr, port))
 
     #TODO: TIMEOUT AFTER 1 SECOND OF NO REQUEST
