@@ -38,21 +38,21 @@ def bind_ports(ports):
     try:
         sock_english = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock_english.bind(('127.0.0.1', ports[0]))
-    except socket.error as e:
+    except socket.error:
         print("<ERROR: That English port is already in use>")
         sys.exit()
 
     try:
         sock_maori = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock_maori.bind(('127.0.0.1', ports[1]))
-    except socket.error as e:
+    except socket.error:
         print("<ERROR: That Maori port is already in use>")
         sys.exit()
 
     try:
         sock_german = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock_german.bind(('127.0.0.1', ports[2]))
-    except socket.error as e:
+    except socket.error:
         print("<ERROR: That German port is already in use>")
         sys.exit()
     return (sock_english, sock_maori, sock_german)

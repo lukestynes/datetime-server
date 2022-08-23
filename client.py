@@ -13,6 +13,14 @@ def client_init():
     
     #TODO: ERROR CHECK ADDRESS
     addr = input("Enter the address of the server: ")
+
+    #Catch incorrect address error
+    try:
+        socket.inet_aton(addr)
+    except socket.error:
+        print("<ERROR: Incorrect server address entered>")
+        return -1
+
     port = input("Enter the port of the server: ")
 
     if not port.isdigit():
