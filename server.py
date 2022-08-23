@@ -118,7 +118,7 @@ def response_packet_builder(req_type, port):
     month = datetime.date.today().month
     day = datetime.date.today().day
     hour = datetime.datetime.now().time().hour
-    minute = datetime.datetime.now().time().hour
+    minute = datetime.datetime.now().time().minute
     text = text_representation(req_type, port, [year, month, day, hour, minute])
     length = len(text)
 
@@ -165,7 +165,7 @@ def run_loop(socks):
 
                 if dt_response != -1:
                     print("[Sending Response to Client]...")
-                    socks[0].sendto(dt_response, addr) #UDP is connectionless so you have to send it back to where it came from, it can change!
+                    socks[0].sendto(dt_response, addr)
             else:
                 print("[Packet Recieved is Invalid]")
         

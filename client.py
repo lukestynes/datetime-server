@@ -1,4 +1,3 @@
-from mimetypes import init
 import socket
 import select
 import sys
@@ -11,7 +10,6 @@ def client_init():
         print("<ERROR: You must enter 'date' or 'time'>")
         return -1
     
-    #TODO: ERROR CHECK ADDRESS
     addr = input("Enter the address of the server: ")
 
     #Catch incorrect address error
@@ -54,7 +52,11 @@ def make_request(req_type, addr, port):
     request_array = [0x497E, 0x0001, req]
     dt_request = request_packet_builder(request_array)
 
-    sock.sendto(dt_request, (addr, port))
+    try:
+        sock.sendto(dt_request, (addr, port))
+    except socket.error:
+        print("<ERROR: Failed to send to given IP address>")
+        return -1
 
     #Causes the client to timeout and shut if no response in 1 second
     response = select.select([sock], [], [], 1)
@@ -74,6 +76,7 @@ def check_reponse(resp_packet):
         print("<ERROR: Packet too small>")
         return -1
 
+    #Extracts the information from the packet
     magic_no = (resp_packet[0] << 8) | resp_packet[1]
     packet_type = (resp_packet[2] << 8) | resp_packet[3]
     lang_code = (resp_packet[4] << 8) | resp_packet[5]
@@ -83,7 +86,6 @@ def check_reponse(resp_packet):
     hour = resp_packet[10]
     minute = resp_packet[11]
     length = resp_packet[12]
-    text = resp_packet[13:]
 
     if magic_no != 0x497E:
         print("<ERROR: MagicNo wrong>")
@@ -112,6 +114,7 @@ def check_reponse(resp_packet):
     elif len(resp_packet) != (13 + length):
         print("<ERROR: Packet recieved wrong size>")
         return False
+
     return True
     
 def print_response(resp_packet):
@@ -156,7 +159,6 @@ def main():
         sys.exit()
     else:
         print_response(resp_packet)
-
 
 if __name__ == "__main__":
     main()
