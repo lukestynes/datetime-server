@@ -1,6 +1,7 @@
 import select
 import socket
 import sys
+from tabnanny import check
 
 def port_init():
     """Gets the specified 3 port numbers for each language"""
@@ -48,20 +49,29 @@ def bind_ports(ports):
 
 def check_request(req_packet):
     """Checks if the recieved packet is a correct DT-Request packet"""
-    if req_packet.len() != 6:
+    if len(req_packet) != 6:
         print("<ERROR: Recieved packet is incorrect length. Must be 6 bytes>")
+        print(len(req_packet))
         return False
-    elif req_packet[0] != 0x497E:
-        print("<ERROR: MagicNumber incorrect value>")
+    
+    magicNo = (req_packet[0] << 8) | req_packet[1]
+    packetType = (req_packet[2] << 8) | req_packet[3]
+    requestType = (req_packet[4] << 8) | req_packet[5]
+    
+    if magicNo != 0x497E:
+        print("<ERROR: MagicNumber incorrect value. Packet discarded>")
         return False
-    elif req_packet[1] != 0x0001:
-        print("<ERROR: PacketType incorrect value>")
+    elif packetType != 0x0001:
+        print("<ERROR: PacketType incorrect value. Packet discarded>")
         return False
-    elif req_packet[2] != 0x0001 or req_packet != 0x0002:
-        print("<ERROR: RequestType incorrect>")
+    elif requestType != 0x0001 and req_packet != 0x0002:
+        print("<ERROR: RequestType incorrect. Packet discarded>")
         return False
     
     return True
+
+def response_packet_builder():
+    """Creates a DT-Response packet to be sent to the client"""
 
 def run_loop(socks, ports):
     """Once the sockets are bound this loop runs the server"""
@@ -73,7 +83,9 @@ def run_loop(socks, ports):
         req_packet, addr = socks[0].recvfrom(6) #English
         print(str(req_packet)) #Prints the clients message
         
-        port = ports[0]
+        if check_request:
+            #Packet is correct, move on to next step
+            
 
 
         
