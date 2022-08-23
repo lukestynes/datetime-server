@@ -123,7 +123,7 @@ def response_packet_builder(req_type, port):
             composed_packet += data_array[i].to_bytes(2, byteorder="big")
         else:
             composed_packet += data_array[i].to_bytes(1, byteorder="big")
-            
+
     composed_packet += text.encode('utf-8')
 
     return composed_packet
@@ -133,22 +133,33 @@ def run_loop(socks, ports):
     print("Server is running succesfully")
 
     while True:
-        #TODO: CONVERT THIS TO BE A PROPER THING USING THE SELECT METHOD SO WE DON'T WASTE RESOURCES
-        #Look for the DT-Request Packet
-        req_packet, addr = socks[0].recvfrom(4096) #English
-        #port = ports[0] #TODO NEEDS TO UPDATE PORT DEPENDING ON WHICH SOCKET WE READ
-        print(str(req_packet)) #Prints the clients message
+        resp_list, _, _ = select.select(socks, [], [])
+
+        for sock in resp_list:
+            print("[Packet Recieved from Client]")
+            req_packet, addr = sock.recvfrom(4096) 
+            #port = ports[socks.index(sock)] #Saves the port so we know which language
+
+            valid, req_type = check_request(req_packet)
+
+            if valid:
+                #Packet is correct, move on to next step
+                print("[Packet Recieved is Valid]")
+                if socks.index(sock) == 0:
+                    port = "eng"
+                elif socks.index(sock) == 1:
+                    port = "mao"
+                else:
+                    port = "ger"
+
+                dt_response = response_packet_builder(req_type, port)
+
+                if dt_response != -1:
+                    print("[Sending Response to Client]...")
+                    socks[0].sendto(dt_response, addr) #UDP is connectionless so you have to send it back to where it came from, it can change!
+            else:
+                print("[Packet Recieved is Invalid]")
         
-        valid, req_type = check_request(req_packet)
-        if valid:
-            #Packet is correct, move on to next step
-            dt_response = response_packet_builder(req_type, "eng")
-
-            if dt_response != -1:
-                socks[0].sendto(dt_response, addr) #UDP is connectionless so you have to send it back to where it came from, it can change!
-
-        
-
 def main():
     print("Date Time Server Started...")
     ports = port_init()
