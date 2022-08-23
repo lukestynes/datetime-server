@@ -52,7 +52,7 @@ def check_request(req_packet):
     if len(req_packet) != 6:
         print("<ERROR: Recieved packet is incorrect length. Must be 6 bytes>")
         print(len(req_packet))
-        return False
+        return False, None
     
     magic_no = (req_packet[0] << 8) | req_packet[1]
     packet_type = (req_packet[2] << 8) | req_packet[3]
@@ -120,11 +120,10 @@ def response_packet_builder(req_type, port):
     composed_packet = bytearray()
     for i in range(len(data_array)):
         if i < 4: #First 4 bytes
-            for parameter in data_array[0:3]:
-                composed_packet += parameter.to_bytes(2, byteorder="big")
-        elif i < 9:
-            for parameter in data_array[4:]:
-                composed_packet += parameter.to_bytes(1, byteorder="big")
+            composed_packet += data_array[i].to_bytes(2, byteorder="big")
+        else:
+            composed_packet += data_array[i].to_bytes(1, byteorder="big")
+            
     composed_packet += text.encode('utf-8')
 
     return composed_packet
