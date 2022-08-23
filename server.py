@@ -1,7 +1,7 @@
 import select
 import socket
 import sys
-from tabnanny import check
+import datetime
 
 def port_init():
     """Gets the specified 3 port numbers for each language"""
@@ -54,24 +54,78 @@ def check_request(req_packet):
         print(len(req_packet))
         return False
     
-    magicNo = (req_packet[0] << 8) | req_packet[1]
-    packetType = (req_packet[2] << 8) | req_packet[3]
-    requestType = (req_packet[4] << 8) | req_packet[5]
+    magic_no = (req_packet[0] << 8) | req_packet[1]
+    packet_type = (req_packet[2] << 8) | req_packet[3]
+    request_type = (req_packet[4] << 8) | req_packet[5]
     
-    if magicNo != 0x497E:
+    if magic_no != 0x497E:
         print("<ERROR: MagicNumber incorrect value. Packet discarded>")
         return False
-    elif packetType != 0x0001:
+    elif packet_type != 0x0001:
         print("<ERROR: PacketType incorrect value. Packet discarded>")
         return False
-    elif requestType != 0x0001 and req_packet != 0x0002:
+    elif request_type != 0x0001 and req_packet != 0x0002:
         print("<ERROR: RequestType incorrect. Packet discarded>")
         return False
     
-    return True
+    return True, request_type
 
-def response_packet_builder():
+def text_representation(req_type, lang, date_info):
+    if lang == "eng":
+        months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        
+        if req_type == "date":
+            return "Today's date is {} {}, {}".format(months[date_info[1] - 1], date_info[2], date_info[0])
+        else:
+            return "The current time is {}:{}".format(date_info[3], date_info[4])
+    elif lang == "mao":
+        months = ["Kohitatea", "Hui-tanguru", "Poutu-te-rangi", "Paenga-whawha", "Haratua", "Pipiri", "Hongongoi", "Here-turi-koka", "Mahuru", "Whiringa-a-nuku", "Whiringa-a-rangi", "Hakihea"]
+
+        if req_type == "date":
+            return "Ko te ra o tenei ra ko {} {}, {}".format(months[date_info[1] - 1], date_info[2], date_info[0])
+        else:
+            return "Ko te wa o tenei wa {}:{}".format(date_info[3], date_info[4])
+    else:
+        months = ["Januar", "Februar", "Marz", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"]
+
+        if req_type == "date":
+            return "Heute ist der {} {}, {}".format(months[date_info[1] - 1], date_info[2], date_info[0])
+        else:
+            return "Die Uhrzeit ist {}:{}".format(date_info[3], date_info[4])
+
+
+def response_packet_builder(req_type, port):
     """Creates a DT-Response packet to be sent to the client"""
+    lang = None
+    
+    match port:
+        case "eng":
+            lang = 0x0001
+        case "mao":
+            lang = 0x0002
+        case "ger":
+            lang = 0x0003
+    
+    year = datetime.date.today().year
+    month = datetime.date.today().month
+    day = datetime.date.today().day
+    hour = datetime.datetime.now().time().hour
+    minute = datetime.datetime.now().time().hour
+    text = "hello"
+    length = len(text) #TODO LENGTH OF TEXT FIELD
+
+    data_array = [0x497E, 0x0002, lang, year, month, day, hour, minute, length]
+    composed_packet = bytearray()
+    for i in range(len(data_array)):
+        if i < 4: #First 4 bytes
+            for parameter in data_array[0:3]:
+                composed_packet += parameter.to_bytes(2, byteorder="big")
+        elif i < 9:
+            for parameter in data_array[4:]:
+                composed_packet += parameter.to_bytes(1, byteorder="big")
+    composed_packet += text.encode('utf-8')
+
+    return composed_packet
 
 def run_loop(socks, ports):
     """Once the sockets are bound this loop runs the server"""
@@ -81,17 +135,17 @@ def run_loop(socks, ports):
         #TODO: CONVERT THIS TO BE A PROPER THING USING THE SELECT METHOD SO WE DON'T WASTE RESOURCES
         #Look for the DT-Request Packet
         req_packet, addr = socks[0].recvfrom(6) #English
+        #port = ports[0] #TODO NEEDS TO UPDATE PORT DEPENDING ON WHICH SOCKET WE READ
         print(str(req_packet)) #Prints the clients message
         
-        if check_request:
+        valid, req_type = check_request(req_packet)
+        if valid:
             #Packet is correct, move on to next step
-            
+            dt_response = response_packet_builder(req_type, "eng")
 
+            socks[0].sendto(dt_response, addr) #UDP is connectionless so you have to send it back to where it came from, it can change!
 
         
-        
-        message = bytes("Hello I am UDP Server".encode('utf-8'))
-        socks[0].sendto(message, addr) #UDP is connectionless so you have to send it back to where it came from, it can change!
 
 def main():
     print("Date Time Server Started...")
