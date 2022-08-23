@@ -54,6 +54,7 @@ def make_request(req_type, addr, port):
 
     sock.sendto(dt_request, (addr, port))
 
+    #TODO: TIMEOUT AFTER 1 SECOND OF NO REQUEST
     data, srv_addr = sock.recvfrom(4096)
     print("Server response")
     print(str(data))
