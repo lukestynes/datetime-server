@@ -1,3 +1,4 @@
+from mimetypes import init
 import socket
 import select
 import sys
@@ -10,6 +11,7 @@ def client_init():
         print("<ERROR: You must enter 'date' or 'time'>")
         return -1
     
+    #TODO: ERROR CHECK ADDRESS
     addr = input("Enter the address of the server: ")
     port = input("Enter the port of the server: ")
 
@@ -56,8 +58,6 @@ def make_request(req_type, addr, port):
         print("<ERROR: Server timeout, no response received>")
         sock.close()
         return -1
-
-    
 
 def check_reponse(resp_packet):
     """Checks if the recieved packet is a correct DT-Reponse packet"""
@@ -106,14 +106,38 @@ def check_reponse(resp_packet):
         return False
     return True
     
-
+def print_response(resp_packet):
+    """Prints out the received packet nicely to the terminal"""
+    magic_no = (resp_packet[0] << 8) | resp_packet[1]
+    packet_type = (resp_packet[2] << 8) | resp_packet[3]
+    lang_code = (resp_packet[4] << 8) | resp_packet[5]
+    year = (resp_packet[6] << 8) | resp_packet[7]
+    month = resp_packet[8]
+    day = resp_packet[9]
+    hour = resp_packet[10]
+    minute = resp_packet[11]
+    length = resp_packet[12]
+    text = resp_packet[13:]
+    print("MagicNo: ", magic_no)
+    print("PacketType: ", packet_type)
+    print("LanguageCode: ", lang_code)
+    print("Year: ", year)
+    print("Month: ", month)
+    print("Day: ", day)
+    print("Hour: ", hour)
+    print("Minute: ", minute)
+    print("Length: ", length)
+    print("Text: ", str(text)[2:-1])
 
 def main():
     """Main Function"""
     print("Datetime Client Running...")
-    req_type, addr, port = client_init()
+    init_values = client_init()
     
-    resp_packet = make_request(req_type, addr, port)
+    if init_values == -1:
+        sys.exit()
+
+    resp_packet = make_request(init_values[0], init_values[1], init_values[2])
     
     if resp_packet == -1:
         sys.exit()
@@ -123,26 +147,7 @@ def main():
     if not valid:
         sys.exit()
     else:
-        magic_no = (resp_packet[0] << 8) | resp_packet[1]
-        packet_type = (resp_packet[2] << 8) | resp_packet[3]
-        lang_code = (resp_packet[4] << 8) | resp_packet[5]
-        year = (resp_packet[6] << 8) | resp_packet[7]
-        month = resp_packet[8]
-        day = resp_packet[9]
-        hour = resp_packet[10]
-        minute = resp_packet[11]
-        length = resp_packet[12]
-        text = resp_packet[13:]
-        print("MagicNo: ", magic_no)
-        print("PacketType: ", packet_type)
-        print("LanguageCode: ", lang_code)
-        print("Year: ", year)
-        print("Month: ", month)
-        print("Day: ", day)
-        print("Hour: ", hour)
-        print("Minute: ", minute)
-        print("Length: ", length)
-        print("Text: ", str(text)[2:-1])
+        print_response(resp_packet)
 
 
 if __name__ == "__main__":
