@@ -1,4 +1,5 @@
 import socket
+import select
 import sys
 
 def client_init():
@@ -43,18 +44,20 @@ def make_request(req_type, addr, port):
     request_array = [0x497E, 0x0001, req]
     dt_request = request_packet_builder(request_array)
 
-    print(dt_request)
-    print("length", len(dt_request))
     sock.sendto(dt_request, (addr, port))
 
-    #TODO: TIMEOUT AFTER 1 SECOND OF NO REQUEST
-    data, srv_addr = sock.recvfrom(4096)
-    print("Server response") #!REMOVE LATER
-    print(data) #!ALSO REMOVE
+    #Causes the client to timeout and shut if no response in 1 second
+    ready = select.select([sock], [], [], 1)
+    if ready[0]:
+        data, srv_addr = sock.recvfrom(4096)
+        sock.close()
+        return data
+    else:
+        print("<ERROR: Server timeout, no response received>")
+        sock.close()
+        return -1
 
-    sock.close()
-
-    return data
+    
 
 def check_reponse(resp_packet):
     """Checks if the recieved packet is a correct DT-Reponse packet"""
@@ -112,6 +115,9 @@ def main():
     
     resp_packet = make_request(req_type, addr, port)
     
+    if resp_packet == -1:
+        sys.exit()
+
     valid = check_reponse(resp_packet)
 
     if not valid:
