@@ -1,7 +1,13 @@
+""" ***server.py***
+Server Program for Date-Time COSC264 assignment
+Author: Luke Stynes
+"""
+
 import select
 import socket
 import sys
 import datetime
+
 
 def port_init():
     """Gets the specified 3 port numbers for each language"""
@@ -11,15 +17,15 @@ def port_init():
     maori_port = input("Please enter a port number for Te Reo Maori: ")
     german_port = input("Please enter a port number for German: ")
 
-    #Check for errors, if -1 is returned the program quits out
+    # Check for errors, if -1 is returned the program quits out
     if not english_port.isdigit() or not maori_port.isdigit() or not german_port.isdigit():
         print("<ERROR: Port numbers must be integers>")
         return -1
-    
+
     english_port = int(english_port)
     maori_port = int(maori_port)
     german_port = int(german_port)
-    
+
     if english_port == maori_port or english_port == german_port or maori_port == german_port:
         print("<ERROR: Port numbers must be unique")
         return -1
@@ -29,8 +35,9 @@ def port_init():
     elif english_port > 64000 or german_port > 64000 or maori_port > 64000:
         print("<ERROR: Port numbers must be between 1024 and 64000>")
         return -1
-    
+
     return (english_port, maori_port, german_port)
+
 
 def bind_ports(ports):
     """Attempts to bind the 3 given ports and open 3 sockets"""
@@ -57,17 +64,18 @@ def bind_ports(ports):
         sys.exit()
     return (sock_english, sock_maori, sock_german)
 
+
 def check_request(req_packet):
     """Checks if the recieved packet is a correct DT-Request packet"""
     if len(req_packet) != 6:
         print("<ERROR: Recieved packet is incorrect length. Must be 6 bytes>")
         print(len(req_packet))
         return False, None
-    
+
     magic_no = (req_packet[0] << 8) | req_packet[1]
     packet_type = (req_packet[2] << 8) | req_packet[3]
     request_type = (req_packet[4] << 8) | req_packet[5]
-    
+
     if magic_no != 0x497E:
         print("<ERROR: MagicNumber incorrect value. Packet discarded>")
         return False, None
@@ -77,35 +85,40 @@ def check_request(req_packet):
     elif request_type != 0x0001 and request_type != 0x0002:
         print("<ERROR: RequestType incorrect. Packet discarded>")
         return False, None
-    
+
     return True, request_type
 
+
 def text_representation(req_type, lang, date_info):
-    
+
     if lang == "eng":
-        months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        months = ["January", "February", "March", "April", "May", "June",
+                  "July", "August", "September", "October", "November", "December"]
 
         if req_type == 0x0001:
             return "Today's date is {} {}, {}".format(months[date_info[1] - 1], date_info[2], date_info[0])
         else:
             return "The current time is {}:{}".format(date_info[3], date_info[4])
     elif lang == "mao":
-        months = ["Kohitatea", "Hui-tanguru", "Poutu-te-rangi", "Paenga-whawha", "Haratua", "Pipiri", "Hongongoi", "Here-turi-koka", "Mahuru", "Whiringa-a-nuku", "Whiringa-a-rangi", "Hakihea"]
+        months = ["Kohitatea", "Hui-tanguru", "Poutu-te-rangi", "Paenga-whawha", "Haratua", "Pipiri",
+                  "Hongongoi", "Here-turi-koka", "Mahuru", "Whiringa-a-nuku", "Whiringa-a-rangi", "Hakihea"]
 
         if req_type == 0x0001:
             return "Ko te ra o tenei ra ko {} {}, {}".format(months[date_info[1] - 1], date_info[2], date_info[0])
         else:
             return "Ko te wa o tenei wa {}:{}".format(date_info[3], date_info[4])
     else:
-        months = ["Januar", "Februar", "Marz", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"]
+        months = ["Januar", "Februar", "Marz", "April", "Mai", "Juni",
+                  "Juli", "August", "September", "Oktober", "November", "Dezember"]
 
         if req_type == 0x0001:
             return "Heute ist der {} {}, {}".format(months[date_info[1] - 1], date_info[2], date_info[0])
         else:
             return "Die Uhrzeit ist {}:{}".format(date_info[3], date_info[4])
 
+
 def response_packet_builder(req_type, port):
-    """Creates a DT-Response packet to be sent to the client"""    
+    """Creates a DT-Response packet to be sent to the client"""
     match port:
         case "eng":
             lang = 0x0001
@@ -113,13 +126,14 @@ def response_packet_builder(req_type, port):
             lang = 0x0002
         case "ger":
             lang = 0x0003
-    
+
     year = datetime.date.today().year
     month = datetime.date.today().month
     day = datetime.date.today().day
     hour = datetime.datetime.now().time().hour
     minute = datetime.datetime.now().time().minute
-    text = text_representation(req_type, port, [year, month, day, hour, minute])
+    text = text_representation(
+        req_type, port, [year, month, day, hour, minute])
     length = len(text)
 
     if length > 255:
@@ -129,7 +143,7 @@ def response_packet_builder(req_type, port):
     data_array = [0x497E, 0x0002, lang, year, month, day, hour, minute, length]
     composed_packet = bytearray()
     for i in range(len(data_array)):
-        if i < 4: #First 4 bytes
+        if i < 4:  # First 4 bytes
             composed_packet += data_array[i].to_bytes(2, byteorder="big")
         else:
             composed_packet += data_array[i].to_bytes(1, byteorder="big")
@@ -137,6 +151,7 @@ def response_packet_builder(req_type, port):
     composed_packet += text.encode('utf-8')
 
     return composed_packet
+
 
 def run_loop(socks):
     """Once the sockets are bound this loop runs the server"""
@@ -147,12 +162,12 @@ def run_loop(socks):
 
         for sock in resp_list:
             print("[Packet Recieved from Client]")
-            req_packet, addr = sock.recvfrom(4096) 
+            req_packet, addr = sock.recvfrom(4096)
 
             valid, req_type = check_request(req_packet)
 
             if valid:
-                #Packet is correct, move on to next step
+                # Packet is correct, move on to next step
                 print("[Packet Recieved is Valid]")
                 if socks.index(sock) == 0:
                     port = "eng"
@@ -168,7 +183,8 @@ def run_loop(socks):
                     socks[0].sendto(dt_response, addr)
             else:
                 print("[Packet Recieved is Invalid]")
-        
+
+
 def main():
     print("Date Time Server Started...")
     ports = port_init()
@@ -177,6 +193,7 @@ def main():
         sys.exit()
     socks = bind_ports(ports)
     run_loop(socks)
+
 
 if __name__ == "__main__":
     main()

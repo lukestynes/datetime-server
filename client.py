@@ -1,18 +1,25 @@
+""" ***client.py***
+Client Program for Date-Time COSC264 assignment
+Author: Luke Stynes
+"""
+
 import socket
 import select
 import sys
 
+
 def client_init():
     """Get the initial info from the user for the setup"""
 
-    req_type = input("Enter 'date' or 'time' depending what request you want: ")
+    req_type = input(
+        "Enter 'date' or 'time' depending what request you want: ")
     if req_type != "date" and req_type != "time":
         print("<ERROR: You must enter 'date' or 'time'>")
         return -1
-    
+
     addr = input("Enter the address of the server: ")
 
-    #Catch incorrect address error
+    # Catch incorrect address error
     try:
         socket.inet_aton(addr)
     except socket.error:
@@ -24,13 +31,14 @@ def client_init():
     if not port.isdigit():
         print("<ERROR: Port number must be an integer>")
         return -1
-    
+
     port = int(port)
     if port < 1024 or port > 64000:
         print("<ERROR: Port number must be between 1024 and 64000>")
         return -1
 
     return req_type, addr, port
+
 
 def request_packet_builder(data_array):
     """Takes an array of all the packet numbers and converts it to a bytearray packet"""
@@ -39,6 +47,7 @@ def request_packet_builder(data_array):
         composed_packet += parameter.to_bytes(2, byteorder="big")
 
     return composed_packet
+
 
 def make_request(req_type, addr, port):
     """Opens the UDP socket and sends the DT-Request packet"""
@@ -58,7 +67,7 @@ def make_request(req_type, addr, port):
         print("<ERROR: Failed to send to given IP address>")
         return -1
 
-    #Causes the client to timeout and shut if no response in 1 second
+    # Causes the client to timeout and shut if no response in 1 second
     response = select.select([sock], [], [], 1)
     if response[0]:
         data, srv_addr = sock.recvfrom(4096)
@@ -69,6 +78,7 @@ def make_request(req_type, addr, port):
         sock.close()
         return -1
 
+
 def check_reponse(resp_packet):
     """Checks if the recieved packet is a correct DT-Reponse packet"""
 
@@ -76,7 +86,7 @@ def check_reponse(resp_packet):
         print("<ERROR: Packet too small>")
         return -1
 
-    #Extracts the information from the packet
+    # Extracts the information from the packet
     magic_no = (resp_packet[0] << 8) | resp_packet[1]
     packet_type = (resp_packet[2] << 8) | resp_packet[3]
     lang_code = (resp_packet[4] << 8) | resp_packet[5]
@@ -116,7 +126,8 @@ def check_reponse(resp_packet):
         return False
 
     return True
-    
+
+
 def print_response(resp_packet):
     """Prints out the received packet nicely to the terminal"""
     magic_no = (resp_packet[0] << 8) | resp_packet[1]
@@ -140,16 +151,17 @@ def print_response(resp_packet):
     print("Length: ", length)
     print("Text: ", str(text)[2:-1])
 
+
 def main():
     """Main Function"""
     print("Datetime Client Running...")
     init_values = client_init()
-    
+
     if init_values == -1:
         sys.exit()
 
     resp_packet = make_request(init_values[0], init_values[1], init_values[2])
-    
+
     if resp_packet == -1:
         sys.exit()
 
@@ -159,6 +171,7 @@ def main():
         sys.exit()
     else:
         print_response(resp_packet)
+
 
 if __name__ == "__main__":
     main()
