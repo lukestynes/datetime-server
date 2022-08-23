@@ -60,44 +60,42 @@ def check_request(req_packet):
     
     if magic_no != 0x497E:
         print("<ERROR: MagicNumber incorrect value. Packet discarded>")
-        return False
+        return False, None
     elif packet_type != 0x0001:
         print("<ERROR: PacketType incorrect value. Packet discarded>")
-        return False
-    elif request_type != 0x0001 and req_packet != 0x0002:
+        return False, None
+    elif request_type != 0x0001 and request_type != 0x0002:
         print("<ERROR: RequestType incorrect. Packet discarded>")
-        return False
+        return False, None
     
     return True, request_type
 
 def text_representation(req_type, lang, date_info):
+    
     if lang == "eng":
         months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-        
-        if req_type == "date":
+
+        if req_type == 0x0001:
             return "Today's date is {} {}, {}".format(months[date_info[1] - 1], date_info[2], date_info[0])
         else:
             return "The current time is {}:{}".format(date_info[3], date_info[4])
     elif lang == "mao":
         months = ["Kohitatea", "Hui-tanguru", "Poutu-te-rangi", "Paenga-whawha", "Haratua", "Pipiri", "Hongongoi", "Here-turi-koka", "Mahuru", "Whiringa-a-nuku", "Whiringa-a-rangi", "Hakihea"]
 
-        if req_type == "date":
+        if req_type == 0x0001:
             return "Ko te ra o tenei ra ko {} {}, {}".format(months[date_info[1] - 1], date_info[2], date_info[0])
         else:
             return "Ko te wa o tenei wa {}:{}".format(date_info[3], date_info[4])
     else:
         months = ["Januar", "Februar", "Marz", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"]
 
-        if req_type == "date":
+        if req_type == 0x0001:
             return "Heute ist der {} {}, {}".format(months[date_info[1] - 1], date_info[2], date_info[0])
         else:
             return "Die Uhrzeit ist {}:{}".format(date_info[3], date_info[4])
 
-
 def response_packet_builder(req_type, port):
-    """Creates a DT-Response packet to be sent to the client"""
-    lang = None
-    
+    """Creates a DT-Response packet to be sent to the client"""    
     match port:
         case "eng":
             lang = 0x0001
@@ -111,8 +109,12 @@ def response_packet_builder(req_type, port):
     day = datetime.date.today().day
     hour = datetime.datetime.now().time().hour
     minute = datetime.datetime.now().time().hour
-    text = "hello"
-    length = len(text) #TODO LENGTH OF TEXT FIELD
+    text = text_representation(req_type, port, [year, month, day, hour, minute])
+    length = len(text)
+
+    if length > 255:
+        print("<ERROR: Text representation the wrong length>")
+        return -1
 
     data_array = [0x497E, 0x0002, lang, year, month, day, hour, minute, length]
     composed_packet = bytearray()
@@ -134,7 +136,7 @@ def run_loop(socks, ports):
     while True:
         #TODO: CONVERT THIS TO BE A PROPER THING USING THE SELECT METHOD SO WE DON'T WASTE RESOURCES
         #Look for the DT-Request Packet
-        req_packet, addr = socks[0].recvfrom(6) #English
+        req_packet, addr = socks[0].recvfrom(4096) #English
         #port = ports[0] #TODO NEEDS TO UPDATE PORT DEPENDING ON WHICH SOCKET WE READ
         print(str(req_packet)) #Prints the clients message
         
@@ -143,7 +145,8 @@ def run_loop(socks, ports):
             #Packet is correct, move on to next step
             dt_response = response_packet_builder(req_type, "eng")
 
-            socks[0].sendto(dt_response, addr) #UDP is connectionless so you have to send it back to where it came from, it can change!
+            if dt_response != -1:
+                socks[0].sendto(dt_response, addr) #UDP is connectionless so you have to send it back to where it came from, it can change!
 
         
 
