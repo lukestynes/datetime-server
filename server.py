@@ -46,20 +46,37 @@ def bind_ports(ports):
     #TODO: LOOK INTO ERROR CHECKING IF THIS BIND FAILS, BUT I'M NOT SURE HOW IT WOULD
     return (sock_english, sock_maori, sock_german)
 
-def run_loop(socks):
+def check_request(req_packet):
+    """Checks if the recieved packet is a correct DT-Request packet"""
+    if req_packet.len() != 6:
+        print("<ERROR: Recieved packet is incorrect length. Must be 6 bytes>")
+        return False
+    elif req_packet[0] != 0x497E:
+        print("<ERROR: MagicNumber incorrect value>")
+        return False
+    elif req_packet[1] != 0x0001:
+        print("<ERROR: PacketType incorrect value>")
+        return False
+    elif req_packet[2] != 0x0001 or req_packet != 0x0002:
+        print("<ERROR: RequestType incorrect>")
+        return False
+    
+    return True
+
+def run_loop(socks, ports):
     """Once the sockets are bound this loop runs the server"""
     print("Server is running succesfully")
-
-    inputs = [socks[0], socks[1], socks[2]]
-    outputs = []
-
 
     while True:
         #TODO: CONVERT THIS TO BE A PROPER THING USING THE SELECT METHOD SO WE DON'T WASTE RESOURCES
         #Look for the DT-Request Packet
-        data, addr = socks[0].recvfrom(6) #Something about it being equal to packet size, this is 4096 bytes
-    
-        print(str(data)) #Prints the clients message
+        req_packet, addr = socks[0].recvfrom(6) #English
+        print(str(req_packet)) #Prints the clients message
+        
+        port = ports[0]
+
+
+        
         
         message = bytes("Hello I am UDP Server".encode('utf-8'))
         socks[0].sendto(message, addr) #UDP is connectionless so you have to send it back to where it came from, it can change!
@@ -71,7 +88,7 @@ def main():
     if ports == -1:
         sys.exit()
     socks = bind_ports(ports)
-    run_loop(socks)
+    run_loop(socks, ports)
 
 if __name__ == "__main__":
     main()
