@@ -35,16 +35,26 @@ def port_init():
 def bind_ports(ports):
     """Attempts to bind the 3 given ports and open 3 sockets"""
     print("Attempting to bind the given ports...")
-    sock_english = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock_english.bind(('127.0.0.1', ports[0]))
+    try:
+        sock_english = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock_english.bind(('127.0.0.1', ports[0]))
+    except socket.error as e:
+        print("<ERROR: That English port is already in use>")
+        sys.exit()
 
-    sock_maori = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock_maori.bind(('127.0.0.1', ports[1]))
+    try:
+        sock_maori = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock_maori.bind(('127.0.0.1', ports[1]))
+    except socket.error as e:
+        print("<ERROR: That Maori port is already in use>")
+        sys.exit()
 
-    sock_german = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock_german.bind(('127.0.0.1', ports[2]))
-
-    #TODO: LOOK INTO ERROR CHECKING IF THIS BIND FAILS, BUT I'M NOT SURE HOW IT WOULD
+    try:
+        sock_german = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock_german.bind(('127.0.0.1', ports[2]))
+    except socket.error as e:
+        print("<ERROR: That German port is already in use>")
+        sys.exit()
     return (sock_english, sock_maori, sock_german)
 
 def check_request(req_packet):
@@ -128,7 +138,7 @@ def response_packet_builder(req_type, port):
 
     return composed_packet
 
-def run_loop(socks, ports):
+def run_loop(socks):
     """Once the sockets are bound this loop runs the server"""
     print("Server is running succesfully")
 
@@ -138,7 +148,6 @@ def run_loop(socks, ports):
         for sock in resp_list:
             print("[Packet Recieved from Client]")
             req_packet, addr = sock.recvfrom(4096) 
-            #port = ports[socks.index(sock)] #Saves the port so we know which language
 
             valid, req_type = check_request(req_packet)
 
@@ -167,7 +176,7 @@ def main():
     if ports == -1:
         sys.exit()
     socks = bind_ports(ports)
-    run_loop(socks, ports)
+    run_loop(socks)
 
 if __name__ == "__main__":
     main()
