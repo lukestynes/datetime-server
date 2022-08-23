@@ -1,4 +1,5 @@
 import socket
+import sys
 
 def client_init():
     """Get the initial info from the user for the setup"""
@@ -49,7 +50,7 @@ def make_request(req_type, addr, port):
     #TODO: TIMEOUT AFTER 1 SECOND OF NO REQUEST
     data, srv_addr = sock.recvfrom(4096)
     print("Server response") #!REMOVE LATER
-    print(str(data)) #!ALSO REMOVE
+    print(data) #!ALSO REMOVE
 
     sock.close()
 
@@ -72,7 +73,6 @@ def check_reponse(resp_packet):
     minute = resp_packet[11]
     length = resp_packet[12]
     text = resp_packet[13:]
-
 
     if magic_no != 0x497E:
         print("<ERROR: MagicNo wrong>")
@@ -112,7 +112,32 @@ def main():
     
     resp_packet = make_request(req_type, addr, port)
     
-    check_reponse(resp_packet)
+    valid = check_reponse(resp_packet)
+
+    if not valid:
+        sys.exit()
+    else:
+        magic_no = (resp_packet[0] << 8) | resp_packet[1]
+        packet_type = (resp_packet[2] << 8) | resp_packet[3]
+        lang_code = (resp_packet[4] << 8) | resp_packet[5]
+        year = (resp_packet[6] << 8) | resp_packet[7]
+        month = resp_packet[8]
+        day = resp_packet[9]
+        hour = resp_packet[10]
+        minute = resp_packet[11]
+        length = resp_packet[12]
+        text = resp_packet[13:]
+        print("MagicNo: ", magic_no)
+        print("PacketType: ", packet_type)
+        print("LanguageCode: ", lang_code)
+        print("Year: ", year)
+        print("Month: ", month)
+        print("Day: ", day)
+        print("Hour: ", hour)
+        print("Minute: ", minute)
+        print("Length: ", length)
+        print("Text: ", str(text)[2:-1])
+
 
 if __name__ == "__main__":
     main()
