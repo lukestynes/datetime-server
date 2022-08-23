@@ -48,17 +48,71 @@ def make_request(req_type, addr, port):
 
     #TODO: TIMEOUT AFTER 1 SECOND OF NO REQUEST
     data, srv_addr = sock.recvfrom(4096)
-    print("Server response")
-    print(str(data))
+    print("Server response") #!REMOVE LATER
+    print(str(data)) #!ALSO REMOVE
 
     sock.close()
+
+    return data
+
+def check_reponse(resp_packet):
+    """Checks if the recieved packet is a correct DT-Reponse packet"""
+
+    if len(resp_packet) < 13:
+        print("<ERROR: Packet too small>")
+        return -1
+
+    magic_no = (resp_packet[0] << 8) | resp_packet[1]
+    packet_type = (resp_packet[2] << 8) | resp_packet[3]
+    lang_code = (resp_packet[4] << 8) | resp_packet[5]
+    year = (resp_packet[6] << 8) | resp_packet[7]
+    month = resp_packet[8]
+    day = resp_packet[9]
+    hour = resp_packet[10]
+    minute = resp_packet[11]
+    length = resp_packet[12]
+    text = resp_packet[13:]
+
+
+    if magic_no != 0x497E:
+        print("<ERROR: MagicNo wrong>")
+        return False
+    elif packet_type != 0x0002:
+        print("<ERROR: Wrong packet type>")
+        return False
+    elif lang_code != 0x0001 and lang_code != 0x0002 and lang_code != 0x0003:
+        print("<ERROR: Wrong language code>")
+        return False
+    elif year > 2100:
+        print("<ERROR: You're too far in the future>")
+        return False
+    elif month < 1 or month > 12:
+        print("<ERROR: Incorrect month>")
+        return False
+    elif day < 1 or day > 31:
+        print("<ERROR: Incorrect day>")
+        return False
+    elif hour < 1 or hour > 23:
+        print("<ERROR: Incorrect hour>")
+        return False
+    elif minute < 1 or minute > 59:
+        print("<ERROR: Incorrect minute>")
+        return False
+    elif len(resp_packet) != (13 + length):
+        print("<ERROR: Packet recieved wrong size>")
+        return False
+    return True
+    
 
 
 def main():
     """Main Function"""
     print("Datetime Client Running...")
     req_type, addr, port = client_init()
-    make_request(req_type, addr, port)
+    
+    resp_packet = make_request(req_type, addr, port)
+    
+    check_reponse(resp_packet)
 
 if __name__ == "__main__":
     main()
