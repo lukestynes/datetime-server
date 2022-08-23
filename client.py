@@ -49,8 +49,8 @@ def make_request(req_type, addr, port):
     sock.sendto(dt_request, (addr, port))
 
     #Causes the client to timeout and shut if no response in 1 second
-    ready = select.select([sock], [], [], 1)
-    if ready[0]:
+    response = select.select([sock], [], [], 1)
+    if response[0]:
         data, srv_addr = sock.recvfrom(4096)
         sock.close()
         return data
